@@ -19,4 +19,4 @@
 - 완료 기준
 
 ## 진행 중인 계획
-- [2026-04-09 용어집 및 체크리스트 적용 정렬](./2026-04-09-glossary-checklist-alignment.md)
+- [2026-04-09 BOS 보관정보 실온 정규화](./2026-04-09-bos-storage-normalization.md)
