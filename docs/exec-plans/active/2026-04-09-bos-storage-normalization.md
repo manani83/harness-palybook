@@ -17,6 +17,19 @@
 - BOS 코드 관리에서 `ERP_STORAGE_TYPE.ORDINARY`를 비활성화하거나, 최소한 운영 경로에서 선택 불가 상태로 둔다.
 - 정기 배포 반영 여부와 배포 후 결과를 검증한다.
 
+## 브랜치 메타
+- Jira 링크: https://pulmuone.atlassian.net/browse/SPAG-6823
+- 상위 이슈: SPMO-xxxx
+- 대상 레포: pulmuone-module-2025
+- 작업 유형 : feature
+- 기준 브랜치: qa_develop
+- 생성 브랜치: feature/SPMO-xxxx_xxxx
+<!-- hotfix일때 사용 
+- 작업 유형: hotfix
+- 기준 브랜치: master
+- 생성 브랜치: hotfix/SPMO-xxxx
+-->
+
 ## 작업 대상 경로
 - 코드 작업 workspace root: `/Users/mhkim/dev/workspace_hgr/pulmuone-module-2025`
 - 우선 수정 파일:
