@@ -28,6 +28,14 @@
 - 범위가 바뀌면 상태도 갱신한다.
 - 관련 제품, 설계, 참조 문서와 링크를 건다.
 
+## 문서 배치 규약
+- 문제 정의와 원하는 결과는 `docs/product-specs/`에 적는다.
+- 구조, 트레이드오프, 이벤트/사가 설계는 `docs/design-docs/`에 적는다.
+- 실제 개발 순서, 마일스톤, 검증, 롤백은 `docs/exec-plans/active/`에 적는다.
+- 완료된 결과와 남은 후속 항목은 `docs/exec-plans/completed/`로 옮긴다.
+- 공통 용어는 `docs/GLOSSARY.md`에, 반복 검증 항목은 `docs/CHECKLISTS.md`에, 운영성과 복구 절차는 `docs/RELIABILITY.md`에, 보안과 비밀값은 `docs/SECURITY.md`에 적는다.
+- 손으로 편집하지 않는 계산 결과는 `docs/generated/`에 둔다.
+
 ## 완료된 계획 규칙
 - 무엇이 바뀌었는지 요약한다.
 - 무엇을 검증했는지 기록한다.
