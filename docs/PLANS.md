@@ -33,6 +33,7 @@
 - 구조, 트레이드오프, 이벤트/사가 설계는 `docs/design-docs/`에 적는다.
 - 실제 개발 순서, 마일스톤, 검증, 롤백은 `docs/exec-plans/active/`에 적는다.
 - 완료된 결과와 남은 후속 항목은 `docs/exec-plans/completed/`로 옮긴다.
+- 기획팀의 사람별 Jira 큐와 공용 정책은 [docs/planning/](./planning/)에 둔다.
 - 공통 용어는 `docs/GLOSSARY.md`에, 반복 검증 항목은 `docs/CHECKLISTS.md`에, 운영성과 복구 절차는 `docs/RELIABILITY.md`에, 보안과 비밀값은 `docs/SECURITY.md`에 적는다.
 - 손으로 편집하지 않는 계산 결과는 `docs/generated/`에 둔다.
 

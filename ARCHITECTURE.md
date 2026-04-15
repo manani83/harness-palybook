@@ -17,6 +17,7 @@
 - `docs/design-docs/`: 오래 유지되는 설계 메모와 원칙
 - `docs/product-specs/`: 사용자 관점 요구사항과 제품 명세
 - `docs/exec-plans/`: 진행 중 및 완료된 실행 계획
+- `docs/planning/`: 기획팀 운영 공간, 사람별 Jira 큐, 공용 정책
 - `docs/generated/`: 기계가 생성한 산출물
 - `docs/references/`: 반복 사용되는 도구와 관행에 대한 간결한 참조 파일
 
