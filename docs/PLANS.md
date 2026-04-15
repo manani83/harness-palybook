@@ -35,6 +35,7 @@
 - 완료된 결과와 남은 후속 항목은 `docs/exec-plans/completed/`로 옮긴다.
 - 기획팀의 사람별 Jira 큐와 공용 정책은 [docs/planning/](./planning/)에 둔다.
 - 공통 용어는 `docs/GLOSSARY.md`에, 반복 검증 항목은 `docs/CHECKLISTS.md`에, 운영성과 복구 절차는 `docs/RELIABILITY.md`에, 보안과 비밀값은 `docs/SECURITY.md`에 적는다.
+- 반복되는 작업 절차와 도구 사용법은 `docs/skills/`에 둔다.
 - 손으로 편집하지 않는 계산 결과는 `docs/generated/`에 둔다.
 
 ## 완료된 계획 규칙
