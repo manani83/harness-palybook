@@ -19,4 +19,4 @@
 - 완료 기준
 
 ## 진행 중인 계획
-- [2026-04-09 BOS 보관정보 실온 정규화](./2026-04-09-bos-storage-normalization.md)
+- [2026-04-16 셀러용 가격 모니터링 + 경쟁사 추적](./2026-04-16-seller-price-monitoring.md)

@@ -1,0 +1,1868 @@
+openapi: 3.1.0
+info:
+  title: Seller Price Monitoring API
+  version: 0.1.0
+  description: >
+    Draft OpenAPI specification for the seller price monitoring service.
+    This file mirrors the human-readable API design docs and keeps request/response
+    shapes aligned with the schema and wireframes.
+servers:
+  - url: /api/v1
+tags:
+  - name: Auth
+  - name: Organizations
+  - name: Dashboard
+  - name: MonitoredProducts
+  - name: CompetitorProducts
+  - name: Events
+  - name: AlertRules
+  - name: Notifications
+  - name: Reports
+security:
+  - bearerAuth: []
+x-error-response-sets:
+  read: &ReadErrorResponses
+    '400':
+      $ref: '#/components/responses/BadRequestError'
+    '401':
+      $ref: '#/components/responses/UnauthorizedError'
+    '403':
+      $ref: '#/components/responses/ForbiddenError'
+    '404':
+      $ref: '#/components/responses/NotFoundError'
+    '429':
+      $ref: '#/components/responses/RateLimitedError'
+    '503':
+      $ref: '#/components/responses/UpstreamUnavailableError'
+  write: &WriteErrorResponses
+    '400':
+      $ref: '#/components/responses/BadRequestError'
+    '401':
+      $ref: '#/components/responses/UnauthorizedError'
+    '403':
+      $ref: '#/components/responses/ForbiddenError'
+    '404':
+      $ref: '#/components/responses/NotFoundError'
+    '409':
+      $ref: '#/components/responses/ConflictError'
+    '429':
+      $ref: '#/components/responses/RateLimitedError'
+    '503':
+      $ref: '#/components/responses/UpstreamUnavailableError'
+  auth: &AuthErrorResponses
+    '400':
+      $ref: '#/components/responses/BadRequestError'
+    '401':
+      $ref: '#/components/responses/UnauthorizedError'
+    '403':
+      $ref: '#/components/responses/ForbiddenError'
+    '429':
+      $ref: '#/components/responses/RateLimitedError'
+    '503':
+      $ref: '#/components/responses/UpstreamUnavailableError'
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with email and password
+      description: |-
+        401: email or password is invalid.
+        403: account is suspended or login is blocked.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        <<: *AuthErrorResponses
+        '200':
+          description: Login success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh an access token
+      description: |-
+        401: refresh token is missing, expired, or invalid.
+        403: the session has been revoked.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        <<: *AuthErrorResponses
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revoke the current session
+      description: |-
+        401: access token is missing or expired.
+        403: the current session is already revoked.
+      responses:
+        <<: *AuthErrorResponses
+        '204':
+          description: Logged out
+  /me:
+    get:
+      tags: [Auth]
+      summary: Current user and accessible organizations
+      description: |-
+        401: access token is missing or expired.
+        403: the account is suspended or permissions were revoked.
+      responses:
+        <<: *ReadErrorResponses
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+  /organizations:
+    get:
+      tags: [Organizations]
+      summary: List accessible organizations
+      description: |-
+        401: access token is missing or expired.
+        403: workspace access is not granted.
+      responses:
+        <<: *ReadErrorResponses
+        '200':
+          description: Organization list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationListResponse'
+    post:
+      tags: [Organizations]
+      summary: Create an organization
+      description: |-
+        401: access token is missing or expired.
+        403: workspace creation is restricted for this account.
+        409: organization name or slug already exists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationCreateRequest'
+      responses:
+        <<: *WriteErrorResponses
+        '201':
+          description: Organization created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationResponse'
+  /organizations/{organizationId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      tags: [Organizations]
+      summary: Get organization details
+      description: |-
+        401: access token is missing or expired.
+        403: caller is not a member of the organization.
+        404: organization not found.
+      responses:
+        <<: *ReadErrorResponses
+        '200':
+          description: Organization details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationResponse'
+    patch:
+      tags: [Organizations]
+      summary: Update organization settings
+      description: |-
+        401: access token is missing or expired.
+        403: admin permission is required.
+        404: organization not found.
+        409: name or status change conflicts with the current state.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationUpdateRequest'
+      responses:
+        <<: *WriteErrorResponses
+        '200':
+          description: Organization updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationResponse'
+  /organizations/{organizationId}/members:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      tags: [Organizations]
+      summary: List organization members
+      description: |-
+        401: access token is missing or expired.
+        403: member list access is denied.
+        404: organization not found.
+      responses:
+        <<: *ReadErrorResponses
+        '200':
+          description: Member list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationMemberListResponse'
+  /organizations/{organizationId}/invites:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    post:
+      tags: [Organizations]
+      summary: Invite a new member
+      description: |-
+        401: access token is missing or expired.
+        403: invite sending permission is required.
+        404: organization not found.
+        409: the target email is already invited or already a member.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationInviteCreateRequest'
+      responses:
+        <<: *WriteErrorResponses
+        '201':
+          description: Invite created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationInviteResponse'
+  /invites/{token}/accept:
+    post:
+      tags: [Organizations]
+      summary: Accept an invitation
+      description: |-
+        401: access token is missing or expired.
+        403: the invite email does not match the current account.
+        404: invite token is missing, expired, or invalid.
+        409: the invite was already accepted or the user is already a member.
+      parameters:
+        - $ref: '#/components/parameters/InviteToken'
+      responses:
+        <<: *WriteErrorResponses
+        '200':
+          description: Invite accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationInviteAcceptResponse'
+  /organizations/{organizationId}/members/{memberId}:
+    delete:
+      tags: [Organizations]
+      summary: Remove a member from an organization
+      description: |-
+        401: access token is missing or expired.
+        403: member removal permission is required.
+        404: organization or member not found.
+        409: the last admin cannot be removed or the member is already locked.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+        - $ref: '#/components/parameters/MemberId'
+      responses:
+        <<: *WriteErrorResponses
+        '204':
+          description: Member removed
+  /dashboard/summary:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard summary
+      description: |-
+        401: access token is missing or expired.
+        403: organization access is denied.
+        404: organization not found.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationIdQuery'
+        - $ref: '#/components/parameters/Range'
+      responses:
+        <<: *ReadErrorResponses
+        '200':
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummaryResponse'
+  /monitored-products:
+    get:
+      tags: [MonitoredProducts]
+      summary: List monitored products
+      description: |-
+        401: access token is missing or expired.
+        403: product list access is denied.
+        404: organization not found.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationIdQuery'
+        - $ref: '#/components/parameters/StatusQuery'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        <<: *ReadErrorResponses
+        '200':
+          description: Monitored product list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonitoredProductListResponse'
+    post:
+      tags: [MonitoredProducts]
+      summary: Create a monitored product
+      description: |-
+        401: access token is missing or expired.
+        403: product creation permission is required.
+        404: organization not found.
+        409: the owner product or URL is already tracked.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MonitoredProductCreateRequest'
+      responses:
+        <<: *WriteErrorResponses
+        '201':
+          description: Monitored product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonitoredProductResponse'
+  /monitored-products/{monitoredProductId}:
+    parameters:
+      - $ref: '#/components/parameters/MonitoredProductId'
+    get:
+      tags: [MonitoredProducts]
+      summary: Get monitored product details
+      description: |-
+        401: access token is missing or expired.
+        403: caller cannot view this monitored product.
+        404: monitored product not found.
+      responses:
+        <<: *ReadErrorResponses
+        '200':
+          description: Monitored product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonitoredProductResponse'
+    patch:
+      tags: [MonitoredProducts]
+      summary: Update a monitored product
+      description: |-
+        401: access token is missing or expired.
+        403: product update permission is required.
+        404: monitored product not found.
+        409: the product is archived or the state change conflicts with current tracking.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MonitoredProductUpdateRequest'
+      responses:
+        <<: *WriteErrorResponses
+        '200':
+          description: Monitored product updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonitoredProductResponse'
+    delete:
+      tags: [MonitoredProducts]
+      summary: Disable a monitored product
+      description: |-
+        401: access token is missing or expired.
+        403: product deletion permission is required.
+        404: monitored product not found.
+        409: active competitor products prevent deletion.
+      responses:
+        <<: *WriteErrorResponses
+        '204':
+          description: Monitored product archived
+  /monitored-products/{monitoredProductId}/competitor-products:
+    parameters:
+      - $ref: '#/components/parameters/MonitoredProductId'
+    get:
+      tags: [CompetitorProducts]
+      summary: List competitor products for a monitored product
+      description: |-
+        401: access token is missing or expired.
+        403: competitor list access is denied.
+        404: monitored product not found.
+      responses:
+        <<: *ReadErrorResponses
+        '200':
+          description: Competitor product list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompetitorProductListResponse'
+    post:
+      tags: [CompetitorProducts]
+      summary: Register a competitor product
+      description: |-
+        401: access token is missing or expired.
+        403: competitor product registration permission is required.
+        404: monitored product not found.
+        409: the competitor product URL is already tracked for this product.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompetitorProductCreateRequest'
+      responses:
+        <<: *WriteErrorResponses
+        '201':
+          description: Competitor product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompetitorProductResponse'
+  /competitor-products/{competitorProductId}:
+    parameters:
+      - $ref: '#/components/parameters/CompetitorProductId'
+    patch:
+      tags: [CompetitorProducts]
+      summary: Update a competitor product
+      description: |-
+        401: access token is missing or expired.
+        403: competitor product update permission is required.
+        404: competitor product not found.
+        409: the competitor is already inactive or the requested state conflicts with current tracking.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompetitorProductUpdateRequest'
+      responses:
+        <<: *WriteErrorResponses
+        '200':
+          description: Competitor product updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompetitorProductResponse'
+    delete:
+      tags: [CompetitorProducts]
+      summary: Stop tracking a competitor product
+      description: |-
+        401: access token is missing or expired.
+        403: competitor product deletion permission is required.
+        404: competitor product not found.
+        409: the competitor is already removed or snapshots prevent deletion.
+      responses:
+        <<: *WriteErrorResponses
+        '204':
+          description: Competitor product removed
+  /competitor-products/{competitorProductId}/snapshots:
+    get:
+      tags: [CompetitorProducts]
+      summary: List snapshots for a competitor product
+      description: |-
+        401: access token is missing or expired.
+        403: snapshot access is denied.
+        404: competitor product not found.
+      parameters:
+        - $ref: '#/components/parameters/CompetitorProductId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        <<: *ReadErrorResponses
+        '200':
+          description: Snapshot list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSnapshotListResponse'
+  /events:
+    get:
+      tags: [Events]
+      summary: List events
+      description: |-
+        401: access token is missing or expired.
+        403: event access is denied.
+        404: organization not found.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationIdQuery'
+        - $ref: '#/components/parameters/EventTypeQuery'
+        - $ref: '#/components/parameters/IsReadQuery'
+        - $ref: '#/components/parameters/IsPinnedQuery'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        <<: *ReadErrorResponses
+        '200':
+          description: Event list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventListResponse'
+  /events/{eventId}:
+    parameters:
+      - $ref: '#/components/parameters/EventId'
+    get:
+      tags: [Events]
+      summary: Get event details
+      description: |-
+        401: access token is missing or expired.
+        403: event access is denied.
+        404: event not found.
+      responses:
+        <<: *ReadErrorResponses
+        '200':
+          description: Event details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponse'
+    patch:
+      tags: [Events]
+      summary: Update event state
+      description: |-
+        401: access token is missing or expired.
+        403: event update permission is required.
+        404: event not found.
+        409: the event is already resolved or the state transition conflicts with current status.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventUpdateRequest'
+      responses:
+        <<: *WriteErrorResponses
+        '200':
+          description: Event updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponse'
+  /alert-rules:
+    get:
+      tags: [AlertRules]
+      summary: List alert rules
+      description: |-
+        401: access token is missing or expired.
+        403: alert rule access is denied.
+        404: organization not found.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationIdQuery'
+      responses:
+        <<: *ReadErrorResponses
+        '200':
+          description: Alert rule list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertRuleListResponse'
+    post:
+      tags: [AlertRules]
+      summary: Create an alert rule
+      description: |-
+        401: access token is missing or expired.
+        403: alert rule creation permission is required.
+        404: organization not found.
+        409: a duplicate or conflicting rule already exists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertRuleCreateRequest'
+      responses:
+        <<: *WriteErrorResponses
+        '201':
+          description: Alert rule created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertRuleResponse'
+  /alert-rules/{alertRuleId}:
+    parameters:
+      - $ref: '#/components/parameters/AlertRuleId'
+    patch:
+      tags: [AlertRules]
+      summary: Update an alert rule
+      description: |-
+        401: access token is missing or expired.
+        403: alert rule update permission is required.
+        404: alert rule not found.
+        409: another rule already uses the same condition set.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertRuleUpdateRequest'
+      responses:
+        <<: *WriteErrorResponses
+        '200':
+          description: Alert rule updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertRuleResponse'
+    delete:
+      tags: [AlertRules]
+      summary: Disable an alert rule
+      description: |-
+        401: access token is missing or expired.
+        403: alert rule deletion permission is required.
+        404: alert rule not found.
+        409: the rule is already disabled or protected from deletion.
+      responses:
+        <<: *WriteErrorResponses
+        '204':
+          description: Alert rule deleted
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications
+      description: |-
+        401: access token is missing or expired.
+        403: notification access is denied.
+        404: organization not found.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationIdQuery'
+        - $ref: '#/components/parameters/NotificationStatusQuery'
+        - $ref: '#/components/parameters/DeliveryChannelQuery'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        <<: *ReadErrorResponses
+        '200':
+          description: Notification list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationListResponse'
+  /notifications/{notificationId}:
+    parameters:
+      - $ref: '#/components/parameters/NotificationId'
+    patch:
+      tags: [Notifications]
+      summary: Mark a notification as read
+      description: |-
+        401: access token is missing or expired.
+        403: notification update permission is required.
+        404: notification not found.
+        409: the notification is already in a final state.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                readAt:
+                  type: string
+                  format: date-time
+      responses:
+        <<: *WriteErrorResponses
+        '200':
+          description: Notification updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
+  /reports:
+    get:
+      tags: [Reports]
+      summary: List reports
+      description: |-
+        401: access token is missing or expired.
+        403: report access is denied.
+        404: organization not found.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationIdQuery'
+        - $ref: '#/components/parameters/ReportTypeQuery'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        <<: *ReadErrorResponses
+        '200':
+          description: Report list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportListResponse'
+  /reports/{reportId}:
+    parameters:
+      - $ref: '#/components/parameters/ReportId'
+    get:
+      tags: [Reports]
+      summary: Get a report
+      description: |-
+        401: access token is missing or expired.
+        403: report access is denied.
+        404: report not found.
+      responses:
+        <<: *ReadErrorResponses
+        '200':
+          description: Report details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    OrganizationId:
+      name: organizationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    MemberId:
+      name: memberId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    InviteToken:
+      name: token
+      in: path
+      required: true
+      schema:
+        type: string
+    MonitoredProductId:
+      name: monitoredProductId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CompetitorProductId:
+      name: competitorProductId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AlertRuleId:
+      name: alertRuleId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    NotificationId:
+      name: notificationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ReportId:
+      name: reportId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    OrganizationIdQuery:
+      name: organizationId
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Range:
+      name: range
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [24h, 7d, 30d]
+    StatusQuery:
+      name: status
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [active, paused, archived]
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    From:
+      name: from
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date-time
+    To:
+      name: to
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date-time
+    EventTypeQuery:
+      name: eventType
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - price_drop
+          - price_rise
+          - lowest_price_changed
+          - margin_risk
+          - out_of_stock
+          - restock
+          - review_spike
+          - rating_alert
+    IsReadQuery:
+      name: isRead
+      in: query
+      required: false
+      schema:
+        type: boolean
+    IsPinnedQuery:
+      name: isPinned
+      in: query
+      required: false
+      schema:
+        type: boolean
+    NotificationStatusQuery:
+      name: status
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [queued, sent, delivered, failed]
+    DeliveryChannelQuery:
+      name: channel
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [email, slack, kakaowork, webhook]
+    ReportTypeQuery:
+      name: reportType
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [daily_summary, weekly_summary, client_report]
+  responses:
+    UnauthorizedError:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    BadRequestError:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ForbiddenError:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFoundError:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ConflictError:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RateLimitedError:
+      description: Rate Limited
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UpstreamUnavailableError:
+      description: Upstream Unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    ResponseMeta:
+      type: object
+      required: [requestId, nextCursor, hasMore]
+      properties:
+        requestId:
+          type: string
+        nextCursor:
+          type: [string, 'null']
+        hasMore:
+          type: boolean
+    ErrorResponse:
+      type: object
+      required: [error]
+      example:
+        error:
+          code: VALIDATION_ERROR
+          message: ownerProductUrl is required
+          details:
+            ownerProductUrl: [required]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+    LoginRequest:
+      type: object
+      required: [email, password]
+      example:
+        email: seller@example.com
+        password: password123
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      example:
+        refreshToken: jwt-refresh-token
+      properties:
+        refreshToken:
+          type: string
+    UserSummary:
+      type: object
+      required: [id, email, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+    Organization:
+      type: object
+      required: [id, name, plan, status, timezone, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        plan:
+          type: string
+          enum: [starter, growth, agency]
+        status:
+          type: string
+          enum: [active, suspended, closed]
+        timezone:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    OrganizationCreateRequest:
+      type: object
+      required: [name, timezone]
+      example:
+        name: 브랜드 A
+        timezone: Asia/Seoul
+      properties:
+        name:
+          type: string
+        timezone:
+          type: string
+    OrganizationUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        timezone:
+          type: string
+        plan:
+          type: string
+          enum: [starter, growth, agency]
+    OrganizationMember:
+      type: object
+      required: [id, userId, email, name, role, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, operator, viewer]
+        status:
+          type: string
+          enum: [active, suspended]
+        createdAt:
+          type: string
+          format: date-time
+    OrganizationInviteCreateRequest:
+      type: object
+      required: [email, role]
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [admin, operator, viewer]
+    OrganizationInvite:
+      type: object
+      required: [id, organizationId, email, role, status, expiresAt, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [admin, operator, viewer]
+        invitedByUserId:
+          type: [string, 'null']
+          format: uuid
+        status:
+          type: string
+          enum: [pending, accepted, expired, revoked]
+        expiresAt:
+          type: string
+          format: date-time
+        acceptedAt:
+          type: [string, 'null']
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    OrganizationInviteAcceptResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          properties:
+            organizationId:
+              type: string
+              format: uuid
+            userId:
+              type: string
+              format: uuid
+            role:
+              type: string
+              enum: [admin, operator, viewer]
+    DashboardMetricSummary:
+      type: object
+      required:
+        - priceDropCompetitorCount
+        - cheaperCompetitorCount
+        - marginRiskCount
+        - stockOutCount
+        - reviewSpikeCount
+      properties:
+        priceDropCompetitorCount:
+          type: integer
+        cheaperCompetitorCount:
+          type: integer
+        marginRiskCount:
+          type: integer
+        stockOutCount:
+          type: integer
+        reviewSpikeCount:
+          type: integer
+    ActionItem:
+      type: object
+      required: [monitoredProductId, title, reason, severity, currentLowestEffectivePrice, minMarginPrice]
+      properties:
+        monitoredProductId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        reason:
+          type: string
+        severity:
+          type: string
+          enum: [low, medium, high]
+        currentLowestEffectivePrice:
+          type: number
+        minMarginPrice:
+          type: number
+    DashboardSummary:
+      type: object
+      required: [asOf, metrics, actionItems]
+      example:
+        asOf: '2026-04-16T00:00:00Z'
+        metrics:
+          priceDropCompetitorCount: 12
+          cheaperCompetitorCount: 8
+          marginRiskCount: 3
+          stockOutCount: 2
+          reviewSpikeCount: 5
+        actionItems:
+          - monitoredProductId: 00000000-0000-0000-0000-000000000000
+            title: 경쟁사 A 가격 8% 하락
+            reason: marginRisk
+            severity: high
+            currentLowestEffectivePrice: 28100
+            minMarginPrice: 29000
+      properties:
+        asOf:
+          type: string
+          format: date-time
+        metrics:
+          $ref: '#/components/schemas/DashboardMetricSummary'
+        actionItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActionItem'
+    MonitoredProduct:
+      type: object
+      required:
+        - id
+        - organizationId
+        - ownerProductName
+        - ownerProductUrl
+        - ownerPrice
+        - minMarginPrice
+        - category
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        ownerProductName:
+          type: string
+        ownerProductUrl:
+          type: string
+          format: uri
+        ownerPrice:
+          type: number
+        minMarginPrice:
+          type: number
+        category:
+          type: string
+        notes:
+          type: [string, 'null']
+        status:
+          type: string
+          enum: [active, paused, archived]
+        competitorCount:
+          type: integer
+        lowestEffectivePrice:
+          type: [number, 'null']
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    MonitoredProductCreateRequest:
+      type: object
+      required:
+        - organizationId
+        - ownerProductName
+        - ownerProductUrl
+        - ownerPrice
+        - minMarginPrice
+        - category
+      example:
+        organizationId: 00000000-0000-0000-0000-000000000000
+        ownerProductName: 유기농 견과세트
+        ownerProductUrl: https://example.com/my-product
+        ownerPrice: 39000
+        minMarginPrice: 32000
+        category: 식품
+        competitors:
+          - channel: coupang
+            competitorName: 경쟁사 A
+            competitorProductUrl: https://example.com/competitor-a
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        ownerProductName:
+          type: string
+        ownerProductUrl:
+          type: string
+          format: uri
+        ownerPrice:
+          type: number
+        minMarginPrice:
+          type: number
+        category:
+          type: string
+        competitors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CompetitorProductCreateInline'
+    MonitoredProductUpdateRequest:
+      type: object
+      properties:
+        ownerProductName:
+          type: string
+        ownerProductUrl:
+          type: string
+          format: uri
+        ownerPrice:
+          type: number
+        minMarginPrice:
+          type: number
+        category:
+          type: string
+        status:
+          type: string
+          enum: [active, paused, archived]
+        notes:
+          type: string
+    CompetitorProductCreateInline:
+      type: object
+      required: [channel, competitorName, competitorProductUrl]
+      properties:
+        channel:
+          type: string
+          enum: [coupang, smartstore, 11st, gmarket, custom]
+        competitorName:
+          type: string
+        competitorProductUrl:
+          type: string
+          format: uri
+    CompetitorProduct:
+      type: object
+      required:
+        - id
+        - monitoredProductId
+        - channel
+        - competitorName
+        - competitorProductUrl
+        - isActive
+        - firstSeenAt
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        monitoredProductId:
+          type: string
+          format: uuid
+        channel:
+          type: string
+          enum: [coupang, smartstore, 11st, gmarket, custom]
+        competitorName:
+          type: string
+        competitorProductUrl:
+          type: string
+          format: uri
+        competitorProductTitle:
+          type: [string, 'null']
+        isActive:
+          type: boolean
+        firstSeenAt:
+          type: string
+          format: date-time
+        lastSeenAt:
+          type: [string, 'null']
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CompetitorProductCreateRequest:
+      allOf:
+        - $ref: '#/components/schemas/CompetitorProductCreateInline'
+    CompetitorProductUpdateRequest:
+      type: object
+      properties:
+        competitorName:
+          type: string
+        competitorProductUrl:
+          type: string
+          format: uri
+        competitorProductTitle:
+          type: string
+        isActive:
+          type: boolean
+        channel:
+          type: string
+          enum: [coupang, smartstore, 11st, gmarket, custom]
+    ProductSnapshot:
+      type: object
+      required:
+        - id
+        - competitorProductId
+        - collectedAt
+        - listedPrice
+        - shippingFee
+        - couponPrice
+        - effectivePrice
+        - reviewCount
+        - stockStatus
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        competitorProductId:
+          type: string
+          format: uuid
+        collectedAt:
+          type: string
+          format: date-time
+        listedPrice:
+          type: number
+        shippingFee:
+          type: number
+        couponPrice:
+          type: number
+        effectivePrice:
+          type: number
+        reviewCount:
+          type: integer
+        rating:
+          type: [number, 'null']
+        stockStatus:
+          type: string
+          enum: [in_stock, out_of_stock, unknown]
+        sellerName:
+          type: [string, 'null']
+        createdAt:
+          type: string
+          format: date-time
+    Event:
+      type: object
+      required:
+        - id
+        - organizationId
+        - monitoredProductId
+        - eventType
+        - detectedAt
+        - isRead
+        - isPinned
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        monitoredProductId:
+          type: string
+          format: uuid
+        competitorProductId:
+          type: [string, 'null']
+          format: uuid
+        eventType:
+          type: string
+          enum:
+            - price_drop
+            - price_rise
+            - lowest_price_changed
+            - margin_risk
+            - out_of_stock
+            - restock
+            - review_spike
+            - rating_alert
+        oldValue:
+          type: [object, 'null']
+          additionalProperties: true
+        newValue:
+          type: [object, 'null']
+          additionalProperties: true
+        changeRate:
+          type: [number, 'null']
+        detectedAt:
+          type: string
+          format: date-time
+        isRead:
+          type: boolean
+        isPinned:
+          type: boolean
+        resolvedAt:
+          type: [string, 'null']
+          format: date-time
+        note:
+          type: [string, 'null']
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    EventUpdateRequest:
+      type: object
+      example:
+        isRead: true
+        isPinned: false
+        resolvedAt: '2026-04-16T00:00:00Z'
+        note: 가격 조정 예정
+      properties:
+        isRead:
+          type: boolean
+        isPinned:
+          type: boolean
+        resolvedAt:
+          type: [string, 'null']
+          format: date-time
+        note:
+          type: [string, 'null']
+    AlertRule:
+      type: object
+      required:
+        - id
+        - organizationId
+        - ruleType
+        - threshold
+        - deliveryChannel
+        - isEnabled
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        ruleType:
+          type: string
+          enum:
+            - price_drop_pct
+            - price_floor
+            - margin_floor
+            - stock_change
+            - review_spike
+            - rating_threshold
+        threshold:
+          type: number
+        deliveryChannel:
+          type: string
+          enum: [email, slack, kakaowork, webhook]
+        filterJson:
+          type: object
+          additionalProperties: true
+        isEnabled:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AlertRuleCreateRequest:
+      type: object
+      required: [organizationId, ruleType, threshold, deliveryChannel, isEnabled]
+      example:
+        organizationId: 00000000-0000-0000-0000-000000000000
+        ruleType: price_drop_pct
+        threshold: 3
+        deliveryChannel: slack
+        filterJson:
+          category: 식품
+        isEnabled: true
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        ruleType:
+          type: string
+          enum:
+            - price_drop_pct
+            - price_floor
+            - margin_floor
+            - stock_change
+            - review_spike
+            - rating_threshold
+        threshold:
+          type: number
+        deliveryChannel:
+          type: string
+          enum: [email, slack, kakaowork, webhook]
+        filterJson:
+          type: object
+          additionalProperties: true
+        isEnabled:
+          type: boolean
+    AlertRuleUpdateRequest:
+      type: object
+      properties:
+        ruleType:
+          type: string
+          enum:
+            - price_drop_pct
+            - price_floor
+            - margin_floor
+            - stock_change
+            - review_spike
+            - rating_threshold
+        threshold:
+          type: number
+        deliveryChannel:
+          type: string
+          enum: [email, slack, kakaowork, webhook]
+        filterJson:
+          type: object
+          additionalProperties: true
+        isEnabled:
+          type: boolean
+    Notification:
+      type: object
+      required:
+        - id
+        - organizationId
+        - deliveryChannel
+        - recipient
+        - title
+        - body
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        eventId:
+          type: [string, 'null']
+          format: uuid
+        monitoredProductId:
+          type: [string, 'null']
+          format: uuid
+        deliveryChannel:
+          type: string
+          enum: [email, slack, kakaowork, webhook]
+        recipient:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        status:
+          type: string
+          enum: [queued, sent, delivered, failed]
+        sentAt:
+          type: [string, 'null']
+          format: date-time
+        deliveredAt:
+          type: [string, 'null']
+          format: date-time
+        readAt:
+          type: [string, 'null']
+          format: date-time
+        errorMessage:
+          type: [string, 'null']
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Report:
+      type: object
+      required:
+        - id
+        - organizationId
+        - reportType
+        - reportDate
+        - payloadJson
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        reportType:
+          type: string
+          enum: [daily_summary, weekly_summary, client_report]
+        reportDate:
+          type: string
+          format: date
+        payloadJson:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AuthTokenResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [accessToken, refreshToken, user]
+          properties:
+            accessToken:
+              type: string
+            refreshToken:
+              type: string
+            user:
+              $ref: '#/components/schemas/UserSummary'
+    LoginResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [accessToken, refreshToken, user]
+          properties:
+            accessToken:
+              type: string
+            refreshToken:
+              type: string
+            user:
+              $ref: '#/components/schemas/UserSummary'
+    MeResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [user, organizations]
+          properties:
+            user:
+              $ref: '#/components/schemas/UserSummary'
+            organizations:
+              type: array
+              items:
+                $ref: '#/components/schemas/Organization'
+    OrganizationResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Organization'
+    OrganizationListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Organization'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    OrganizationMemberListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrganizationMember'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    OrganizationInviteResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/OrganizationInvite'
+    DashboardSummaryResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/DashboardSummary'
+    MonitoredProductResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/MonitoredProduct'
+    MonitoredProductListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonitoredProduct'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    CompetitorProductResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/CompetitorProduct'
+    CompetitorProductListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CompetitorProduct'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    ProductSnapshotListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductSnapshot'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    EventResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Event'
+    EventListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    AlertRuleResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AlertRule'
+    AlertRuleListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlertRule'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    NotificationResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Notification'
+    NotificationListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    ReportResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Report'
+    ReportListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Report'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'

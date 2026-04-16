@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/seller_price_monitoring_test
+    username: seller_price_monitoring
+    password: seller_price_monitoring
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  flyway:
+    enabled: false
+
+app:
+  delivery:
+    mode: log
